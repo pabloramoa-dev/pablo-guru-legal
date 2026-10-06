@@ -1,0 +1,59 @@
+name: Limpeza de mídia temporária
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "midia/**"
+      - ".github/workflows/limpeza-midia.yml"
+  schedule:
+    - cron: "25 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pablo-guru-legal-limpeza
+  cancel-in-progress: false
+
+jobs:
+  limpar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            .github/workflows/limpeza-midia.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Remover mídia antiga sem baixar os vídeos
+        run: |
+          set -euo pipefail
+          limite=$(date -u -d "2 days ago" +%F)
+          git config user.name "pablo-guru"
+          git config user.email "pablo-guru@users.noreply.github.com"
+
+          git ls-files 'midia/*' | while read -r arquivo; do
+            nome=$(basename "$arquivo")
+            data=""
+            case "$nome" in
+              diario-????-??-??.mp4|capa-????-??-??.jpg)
+                data=$(echo "$nome" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+                ;;
+              carrossel-????-??-??-*.jpg)
+                data=$(echo "$nome" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+                ;;
+            esac
+            if [ -n "$data" ] && [[ "$data" < "$limite" ]]; then
+              git update-index --force-remove -- "$arquivo"
+              echo "removendo $arquivo"
+            fi
+          done
+
+          git diff --cached --quiet && exit 0
+          git commit -q -m "Limpeza automática de mídia temporária"
+          for i in 1 2 3; do git pull --rebase && git push -q && exit 0; sleep 5; done
+          exit 1
