@@ -43,7 +43,7 @@ jobs:
               diario-????-??-??.mp4|capa-????-??-??.jpg)
                 data=$(echo "$nome" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
                 ;;
-              carrossel-????-??-??-*.jpg)
+              carrossel-????-??-??-*.jpg|preview-????-??-??-*.mp4)
                 data=$(echo "$nome" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
                 ;;
             esac
